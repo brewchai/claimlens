@@ -5,12 +5,20 @@ from .deps import get_settings
 from .youtube import extract_video_id, video_meta, transcript_text
 from .openai_client import chat, OpenAIError
 from .prompts import CLAIM_EXTRACT_SYSTEM, VERIFY_SYSTEM, CONSENSUS_SYSTEM
+import logging
 from .search import bing_snippets, factcheck_claims  # keep as-is; it can return []
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 def _json(obj) -> str:
     return json.dumps(obj, ensure_ascii=False)
 
-async def extract_claims(transcript: str, max_claims: int) -> list[str]:
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+
+async def extract_claims(transcript: str, max_claims: int) -> tuple[list[str], str | None]:
     # Keep braces out of f-strings; build with plain strings
     user = (
         transcript[:12000]
@@ -20,10 +28,26 @@ async def extract_claims(transcript: str, max_claims: int) -> list[str]:
     txt = await chat(CLAIM_EXTRACT_SYSTEM, user)
     try:
         data = json.loads(txt)
-        claims = [c["text"] for c in data.get("claims", [])]
-        return claims[:max_claims]
-    except Exception:
-        return []
+
+        # Log summary if present
+        summary = data.get("summary")
+        if summary:
+            logger.info("Video summary: %s", summary)
+
+        claims = []
+        for c in data.get("claims", []):
+            # Always include text for return
+            claims.append(c.get("text", ""))
+
+            # Log extra fields if present
+            extras = {k: v for k, v in c.items() if k != "text"}
+            if extras:
+                logger.info("Extra claim fields: %s", extras)
+
+        return claims[:max_claims], summary
+    except Exception as e:
+        logger.warning("Failed to parse claims JSON: %s", e)
+        return [], None
 
 async def verify_one(claim: str) -> dict:
     s = get_settings()
@@ -90,7 +114,7 @@ async def run_pipeline(req: AnalyzeRequest) -> AnalyzeResponse:
         # Clear 400 with actionable message
         raise ValueError("Transcript unavailable; Whisper fallback not yet configured")
 
-    claims_text = await extract_claims(tr, min(req.maxClaims, s.MAX_CLAIMS))
+    claims_text, video_summary = await extract_claims(tr, min(req.maxClaims, s.MAX_CLAIMS))
     # verify in parallel (cap 3)
     sem = asyncio.Semaphore(3)
 
@@ -117,4 +141,5 @@ async def run_pipeline(req: AnalyzeRequest) -> AnalyzeResponse:
             "model": s.MODEL_PRIMARY,
             "cached": False,
         },
+        videoSummary=video_summary or "",
     )
