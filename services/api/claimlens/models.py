@@ -1,7 +1,7 @@
 from pydantic import BaseModel, HttpUrl, Field
 from typing import List, Optional, Literal
 
-Rating = Literal["high","medium","low"]
+Rating = Literal["unverified", "doubtful", "mixed", "reliable", "solid"]
 
 class AnalyzeRequest(BaseModel):
     url: HttpUrl

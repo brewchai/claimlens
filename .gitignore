@@ -58,3 +58,10 @@ debug.log
 # package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+

@@ -50,55 +50,140 @@ async def extract_claims(transcript: str, max_claims: int) -> tuple[list[str], s
         return [], None
 
 async def verify_one(claim: str) -> dict:
+    logger.info(f"🔍 Verifying claim: {claim[:100]}{'...' if len(claim) > 100 else ''}")
     s = get_settings()
+    
+    # Log search initiation
     snippets = []
     if s.SEARCH_ENABLED:
-        bq = await bing_snippets(claim, 3)
-        fq = await factcheck_claims(claim, 2)
-        snippets = (bq or []) + (fq or [])
+        logger.info("🔎 Search is ENABLED, fetching snippets...")
+        try:
+            bq = await bing_snippets(claim, 3)
+            logger.info(f"🔍 Bing returned {len(bq or [])} snippets")
+            fq = await factcheck_claims(claim, 2)
+            logger.info(f"🔍 FactCheck returned {len(fq or [])} snippets")
+            snippets = (bq or []) + (fq or [])
+            logger.info(f"✅ Total snippets found: {len(snippets)}")
+            if snippets:
+                logger.debug(f"First snippet preview: {snippets[0].get('snippet', '')[:200]}...")
+        except Exception as e:
+            logger.error(f"❌ Error fetching snippets: {str(e)}", exc_info=True)
+    else:
+        logger.warning("⚠️  Search is DISABLED in settings, no snippets will be used")
 
+    # Prepare snippets for the model
     snippet_block = "\n".join(
         f"{i+1}) {snip.get('snippet','')} ({snip.get('url','')})"
         for i, snip in enumerate(snippets)
-    ) or "No web snippets available."
+    ) or "(none)"
 
-    user = (
-        'Claim: "' + claim + '"\n'
+    # Build the user prompt
+    user_prompt = (
+        f'Claim: "{claim}"\n'
         "Snippets:\n" + snippet_block + "\n"
         "Return JSON: "
         + _json({
-            "rating": "high|medium|low",
+            "rating": "unverified|doubtful|mixed|reliable|solid",
             "rationale": "...",
             "sources": [{"title": "...", "url": "..."}],
         })
     )
-    txt = await chat(VERIFY_SYSTEM, user)
-    try:
-        data = json.loads(txt) or {}
-    except Exception:
-        data = {}
+    
+    logger.debug("📤 Sending to verification model...")
+    logger.debug(f"📝 Prompt: {user_prompt[:300]}..." if len(user_prompt) > 300 else f"📝 Prompt: {user_prompt}")
 
-    # normalize
-    rating = (data.get("rating") or "medium").lower()
-    if rating not in ("high", "medium", "low"):
-        rating = "medium"
-    rationale = data.get("rationale") or ("Limited evidence; conservative rating." if not snippets else "")
-    sources = (data.get("sources") or [])[:2]
-    return {"rating": rating, "rationale": rationale, "sources": sources}
+    try:
+        # Get the raw response from the model
+        txt = await chat(VERIFY_SYSTEM, user_prompt)
+        logger.debug(f"📥 Raw response: {txt}")
+
+        # Parse the response
+        try:
+            data = json.loads(txt) or {}
+            logger.debug(f"✅ Parsed response: {data}")
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ Failed to parse JSON response: {e}\nRaw response: {txt}")
+            return {
+                "rating": "unverified",
+                "rationale": "Error parsing verification response",
+                "sources": []
+            }
+
+        # Process the rating
+        valid_ratings = {"unverified", "doubtful", "mixed", "reliable", "solid"}
+        raw_rating = (data.get("rating") or "").strip().lower()
+        logger.info(f"🎯 Raw rating from model: '{raw_rating}'")
+        
+        # Validate and normalize the rating
+        if raw_rating in valid_ratings:
+            rating = raw_rating
+            logger.info(f"✅ Valid rating: {rating}")
+        else:
+            logger.warning(f"⚠️  Invalid rating '{raw_rating}'. Defaulting to 'unverified'")
+            rating = "unverified"
+
+        # Process rationale
+        rationale = data.get("rationale") or "No rationale provided"
+        if not data.get("rationale"):
+            logger.warning("⚠️  No rationale provided in response")
+
+        # Process sources
+        sources = data.get("sources", [])
+        if not isinstance(sources, list):
+            logger.warning(f"⚠️  Sources is not a list: {sources}")
+            sources = []
+        
+        sources = sources[:2]  # Cap at 2 sources
+        logger.info(f"📚 Found {len(sources)} sources in response")
+
+        # Log if we have snippets but got unverified
+        if rating == "unverified" and snippets:
+            logger.warning("⚠️  Claim marked as 'unverified' despite having snippets")
+            logger.debug(f"First snippet: {snippets[0].get('snippet', '')[:200]}...")
+
+        result = {
+            "rating": rating,
+            "rationale": rationale,
+            "sources": sources
+        }
+        
+        logger.info(f"✅ Verification complete. Final rating: {rating}")
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ Error in verify_one: {str(e)}", exc_info=True)
+        return {
+            "rating": "unverified",
+            "rationale": f"Verification error: {str(e)[:100]}",
+            "sources": []
+        }
 
 async def consensus_from(verified: list[dict]) -> dict:
     compact = [{"rating": v.get("rating"), "rationale": v.get("rationale", "")} for v in verified]
-    user = "Claims: " + _json(compact) + "\nReturn JSON: " + _json({"rating":"high|medium|low","summary":"..."})
+    
+    # Update the expected output format in the prompt
+    user = "Claims: " + _json(compact) + "\nReturn JSON: " + _json({
+        "rating": "unverified|doubtful|mixed|reliable|solid",
+        "summary": "..."
+    })
+    
     txt = await chat(CONSENSUS_SYSTEM, user)
+    
     try:
         data = json.loads(txt)
-        rating = (data.get("rating") or "medium").lower()
-        if rating not in ("high", "medium", "low"):
-            rating = "medium"
-        summary = data.get("summary") or "Mixed evidence or uncertainty."
+        rating = (data.get("rating") or "unverified").lower()
+        
+        # Validate the rating is one of our expected values
+        valid_ratings = {"unverified", "doubtful", "mixed", "reliable", "solid"}
+        if rating not in valid_ratings:
+            rating = "unverified"
+            
+        summary = data.get("summary") or "Insufficient evidence or mixed claims."
         return {"rating": rating, "summary": summary}
-    except Exception:
-        return {"rating": "medium", "summary": "Mixed evidence or uncertainty."}
+        
+    except Exception as e:
+        logger.warning(f"Failed to parse consensus: {e}")
+        return {"rating": "unverified", "summary": "Unable to determine consensus due to an error."}
 
 async def run_pipeline(req: AnalyzeRequest) -> AnalyzeResponse:
     s = get_settings()

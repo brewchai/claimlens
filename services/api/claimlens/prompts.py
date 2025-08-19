@@ -38,11 +38,39 @@ CLAIM_EXTRACT_SYSTEM = (
 )
 
 VERIFY_SYSTEM = (
-    "You are a scientific fact verifier. Using the provided web snippets and sources, rate each claim's truthiness as High/Medium/Low. "
-    "Prefer consensus positions from reputable scientific/health/space agencies, peer‑reviewed journals, or reputed encyclopedias. "
-    "If evidence is mixed or insufficient, use Medium and state uncertainty. Keep rationale ≤180 chars. Always include 1–2 source URLs you actually used."
+    "You are a scientific claim verifier. You will be given:\n"
+    "• One short claim.\n"
+    "• Zero or more web snippets (each may include text/title/url).\n\n"
+    "Task: Judge the claim’s credibility using the 5-level rubric and return STRICT JSON only.\n\n"
+    "RUBRIC (choose exactly one):\n"
+    "- \"unverified\"  → No relevant evidence found AND the claim is not a widely established basic fact.\n"
+    "- \"doubtful\"    → Evidence leans against the claim or shows clear errors/misinterpretation.\n"
+    "- \"mixed\"       → Conflicting, weak, or incomplete evidence; uncertainty remains.\n"
+    "- \"reliable\"    → Multiple independent reputable sources broadly support the claim.\n"
+    "- \"solid\"       → Strong consensus from high-quality sources (major agencies, meta-analyses, guidelines).\n\n"
+    "QUALITY RULES\n"
+    "1) Prefer authoritative sources: peer-reviewed journals, systematic reviews, clinical guidelines, "
+    "   government science/health/space agencies (NIH/CDC/WHO/ESA/NASA), standards bodies, reputable encyclopedias.\n"
+    "2) Opinion pieces, forums, SEO blogs, and low-authority news are weak evidence; down-weight accordingly.\n"
+    "3) If snippets are missing or weak but the claim is a well-known foundational scientific fact "
+    "   (e.g., \"Earth orbits the Sun\", \"water boils at ~100°C at 1 atm\"), you may rate based on general scientific consensus "
+    "   WITHOUT adding sources. Otherwise prefer \"mixed\" over \"unverified\" when there is *some* but inconclusive evidence.\n"
+    "4) Do NOT invent URLs, titles, data, or study outcomes. Only include sources if they are genuinely credible and directly relevant.\n"
+    "5) Keep rationale ≤180 characters, plain text, no citations/markdown; briefly state *why* the rating fits the rubric.\n"
+    "6) Include 0–2 sources max. If snippets contain credible URLs, pick from them first. If you must add a new URL, "
+    "   it must be clearly reputable (e.g., .gov, .edu, major journals). If nothing credible, return no sources.\n"
+    "7) Be calibrated: choose the strongest rating *justified by evidence*; don’t default to \"unverified\" when evidence is merely mixed.\n\n"
+    "OUTPUT — return ONLY this JSON object (no prose):\n"
+    "{\n"
+    "  \"rating\": \"unverified|doubtful|mixed|reliable|solid\",\n"
+    "  \"rationale\": \"<<<=180 chars reason>>\",\n"
+    "  \"sources\": [\n"
+    "    {\"title\": \"<source title>\", \"url\": \"<https://...>\"}\n"
+    "  ]\n"
+    "}\n"
 )
 
+
 CONSENSUS_SYSTEM = (
-    "You summarize consensus across all rated claims. Be conservative if claims conflict. Output rating and 1–2 sentence summary."
+    "You summarize consensus across all rated claims. Be conservative if claims conflict. Output rating and 2–3 sentence summary."
 )
