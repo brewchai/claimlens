@@ -1,67 +1,54 @@
-# Node
+# Node.js
 node_modules/
+.npm
+.yarn-integrity
+
+# Expo
+.expo/
+web-build/
+dist/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build files
+build/
+.next/
+out/
+
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
 
-# Build / Output
-dist/
-build/
-.expo/
-.expo-shared/
-coverage/
-
-# React Native
-ios/build/
-ios/Pods/
-android/build/
-android/app/build/
-
-# macOS / Xcode
-*.xcworkspace
-*.xcuserstate
-*.xcuserdata
-DerivedData/
-*.pbxuser
-*.mode1v3
-*.mode2v3
-
-# VSCode / IDE
-.vscode/
+# IDE
 .idea/
-*.swp
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# OS generated
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Env & Config
-.env
-.env.*
-*.local
-
-# Logs
-*.log
-logs/
-debug.log
-
-# Misc
-*.bak
-*.tmp
-*.temp
-*.pid
-*.seed
-*.pid.lock
-
-# Optional lock files (pick one package manager)
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
-
-# Ignore Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+*.egg-info/
+*.egg
