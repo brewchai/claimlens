@@ -16,26 +16,35 @@ export default function AnalyzingScreen() {
         "Checking claims keeps knowledge honest.",
         "Skepticism sharpens understanding.",
         "Curiosity is your superpower in the age of information.",
-        "Asking why is how progress begins."
+        "Asking why is how progress begins.",
+        "Truth is the foundation of trust in a world of claims.",
+        "A fact-checked mind is a shield against deception.",
+        "Verification is the bridge between information and knowledge.",
+        "In a world of noise, critical thinking is your compass.",
+        "The pursuit of truth begins with questioning everything.",
+        "Doubt is the birthplace of deeper understanding.",
+        "Every fact verified is a step toward a clearer reality.",
+        "Wisdom starts with the courage to question.",
+        "In the marketplace of ideas, verification is the currency.",
+        "The truth may be complex, but it's always worth pursuing."
     ];
 
     useEffect(() => {
         console.log('🚀 AnalyzingScreen mounted and useEffect running');
-        const randomIndex = Math.floor(Math.random() * MESSAGES.length);
-        const selectedMessage = MESSAGES[randomIndex];
-        console.log('📝 Random index:', randomIndex);
-        console.log('📝 Selected message:', selectedMessage);
-        setMessage(selectedMessage);
-        console.log('✅ Message state updated');
 
-        const timeout = setTimeout(() => {
-            console.log('Backup message set');
-            setMessage(selectedMessage);
-        }, 100);
+        // Initial message
+        const randomIndex = Math.floor(Math.random() * MESSAGES.length);
+        setMessage(MESSAGES[randomIndex]);
+
+        // Set up interval to change message every 3 seconds
+        const interval = setInterval(() => {
+            const newRandomIndex = Math.floor(Math.random() * MESSAGES.length);
+            setMessage(MESSAGES[newRandomIndex]);
+        }, 2500);
 
         return () => {
             console.log('💀 AnalyzingScreen unmounting');
-            clearTimeout(timeout);
+            clearInterval(interval);
         };
     }, []);
 
