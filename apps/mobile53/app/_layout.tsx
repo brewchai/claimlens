@@ -40,6 +40,7 @@ export default function Layout() {
                 <Tabs.Screen name="screens/HomeScreen" options={{ href: null }} />
                 <Tabs.Screen name="screens/SavedScreen" options={{ href: null }} />
                 <Tabs.Screen name="screens/ProfileScreen" options={{ href: null }} />
+                <Tabs.Screen name="screens/AnalyzingScreen" options={{ href: null }} />
             </Tabs>
             {/* Mount file-based routes like app/results.tsx */}
         </QueryClientProvider>

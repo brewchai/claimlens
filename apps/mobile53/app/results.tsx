@@ -32,10 +32,10 @@ const API_BASE =
     "http://localhost:8000";
 
 export default function Results() {
-    const { url: urlParam } = useLocalSearchParams<{ url?: string }>();
+    const { url: urlParam, reportData } = useLocalSearchParams<{ url?: string; reportData?: string }>();
 
     const [report, setReport] = useState<Report | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [loading, setLoading] = useState<boolean>(false);
 
     const [err, setErr] = useState<string | null>(null);
     const router = useRouter();
@@ -45,6 +45,20 @@ export default function Results() {
     const [showFullSummary, setShowFullSummary] = useState(false);
 
     useEffect(() => {
+        // If we have reportData from navigation params, use it
+        if (reportData) {
+            try {
+                const parsedReport = JSON.parse(reportData);
+                setReport(parsedReport);
+                return;
+            } catch (e) {
+                console.error('Error parsing report data:', e);
+                setErr('Failed to parse analysis results');
+                return;
+            }
+        }
+
+        // Fallback: make API call if no reportData (for backward compatibility)
         if (report || !urlParam) return;
         let ab = new AbortController();
 
@@ -71,7 +85,7 @@ export default function Results() {
         })();
 
         return () => ab.abort();
-    }, [urlParam, report]);
+    }, [urlParam, reportData]);
 
     const colorFor = (rating: string) => {
         switch (rating) {

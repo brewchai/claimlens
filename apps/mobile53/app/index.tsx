@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { UrlInput } from './components/UrlInput';
 import { VideoPreview } from './components/VideoPreview';
+import { analyze } from '../lib/api';
 
 // Helper function to check if URL is a YouTube Short
 const isShortUrl = (url: string): boolean => {
@@ -37,19 +38,30 @@ export default function Index() {
             // Add haptic feedback
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-            // In a real app, you might fetch video metadata here
-            // For now, we'll just navigate to results after a short delay
-            await new Promise(resolve => setTimeout(resolve, 800));
+            // Navigate to analyzing screen first
+            router.push('/screens/AnalyzingScreen');
 
-            router.push({ pathname: "/results", params: { url } });
-        } catch (err) {
+            // Make the REAL API call
+            const result = await analyze(url);
+
+            // Navigate to results with the actual data
+            router.replace({
+                pathname: "/results",
+                params: {
+                    url,
+                    reportData: JSON.stringify(result)
+                }
+            });
+        } catch (err: any) {
             console.error('Error analyzing video:', err);
-            setError('Could not analyze video. Please try again.');
+            setError(err.message || 'Could not analyze video. Please try again.');
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            // Go back to home on error
+            router.replace('/');
         } finally {
             setIsLoading(false);
         }
-    }, [url]);
+    }, [url, router]);
 
     const clearUrl = useCallback(() => {
         setUrl('');

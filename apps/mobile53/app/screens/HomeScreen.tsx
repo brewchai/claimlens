@@ -35,8 +35,14 @@ export default function HomeScreen() {
             setIsLoading(true);
             setError(null);
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            await new Promise(resolve => setTimeout(resolve, 800));
-            router.push({ pathname: '/results', params: { url } });
+
+            // First navigate to the analyzing screen
+            router.push('/screens/AnalyzingScreen');
+
+            // Wait longer for the analyzing screen to be displayed and messages to show
+            await new Promise(resolve => setTimeout(resolve, 4000));
+
+            router.replace({ pathname: '/results', params: { url } });
         } catch (err) {
             console.error('Error analyzing video:', err);
             setError('Could not analyze video. Please try again.');
@@ -44,7 +50,7 @@ export default function HomeScreen() {
         } finally {
             setIsLoading(false);
         }
-    }, [url]);
+    }, [url, router]);
 
     const clearUrl = useCallback(() => {
         setUrl('');
