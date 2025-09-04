@@ -27,5 +27,6 @@ class AnalyzeResponse(BaseModel):
     video: Video
     consensus: Consensus
     claims: List[Claim]
+    reportId: str | None = None  # Will be populated by the backend after saving
     meta: dict
     videoSummary: str

@@ -24,6 +24,7 @@ type Report = {
     claims: Claim[];
     meta: { tookMs: number; model: string; cached: boolean };
     videoSummary: string;
+    reportId?: string;
 };
 
 const API_BASE =

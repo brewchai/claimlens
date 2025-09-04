@@ -30,7 +30,6 @@ export default function AnalyzingScreen() {
     ];
 
     useEffect(() => {
-        console.log('🚀 AnalyzingScreen mounted and useEffect running');
 
         // Initial message
         const randomIndex = Math.floor(Math.random() * MESSAGES.length);

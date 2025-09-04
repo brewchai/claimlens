@@ -5,6 +5,11 @@ import logging, os
 from .models import AnalyzeRequest, AnalyzeResponse
 from .pipeline import run_pipeline
 from .deps import get_settings
+from dotenv import load_dotenv
+from pathlib import Path
+from fastapi.encoders import jsonable_encoder
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(env_path)
 
 s = get_settings()
 app = FastAPI(title="ClaimLens API")
@@ -24,11 +29,25 @@ async def health():
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(req: AnalyzeRequest):
     try:
-        return await run_pipeline(req)
+        # Run the analysis pipeline
+        result = await run_pipeline(req)
+        
+        # Save the report to the database
+        try:
+            from .db import db
+            # Ensure JSON-serializable payload (handles HttpUrl, datetime, etc.)
+            report_data = jsonable_encoder(result)
+            report_id = await db.save_report(report_data)
+            # Add the report ID to the response
+            result.reportId = report_id
+        except Exception as e:
+            # Log the error but don't fail the request
+            import logging
+            logging.error(f"Failed to save report: {str(e)}")
+            
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logging.exception("Analyze failed: %s", e)
-        if s.CLAIMLENS_DEBUG:
-            raise HTTPException(status_code=500, detail=str(e))
-        raise HTTPException(status_code=500, detail="Internal error")
+        logging.exception("Error in analyze endpoint")
+        raise HTTPException(status_code=500, detail="Internal server error")
