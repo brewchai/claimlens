@@ -33,7 +33,12 @@ const API_BASE =
     "http://localhost:8000";
 
 export default function Results() {
-    const { url: urlParam, reportData } = useLocalSearchParams<{ url?: string; reportData?: string }>();
+    const { url: urlParam, reportData, reportId, fromSaved } = useLocalSearchParams<{
+        url?: string;
+        reportData?: string;
+        reportId?: string;
+        fromSaved?: string;
+    }>();
 
     const [report, setReport] = useState<Report | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -46,7 +51,28 @@ export default function Results() {
     const [showFullSummary, setShowFullSummary] = useState(false);
 
     useEffect(() => {
-        // If we have reportData from navigation params, use it
+        // Priority 1: If we have reportId, fetch that specific report
+        if (reportId) {
+            (async () => {
+                try {
+                    setLoading(true);
+                    const res = await fetch(`${API_BASE}/saved-reports/${reportId}`);
+                    if (!res.ok) {
+                        const detail = await res.text().catch(() => "");
+                        throw new Error(`HTTP ${res.status} ${detail}`);
+                    }
+                    const json = await res.json();
+                    setReport(json);
+                } catch (e: any) {
+                    setErr(e.message || "Failed to load saved report");
+                } finally {
+                    setLoading(false);
+                }
+            })();
+            return;
+        }
+
+        // Priority 2: If we have reportData from navigation params, use it
         if (reportData) {
             try {
                 const parsedReport = JSON.parse(reportData);
@@ -59,7 +85,7 @@ export default function Results() {
             }
         }
 
-        // Fallback: make API call if no reportData (for backward compatibility)
+        // Priority 3: Fallback: make API call if no reportData (for backward compatibility)
         if (report || !urlParam) return;
         let ab = new AbortController();
 
@@ -86,7 +112,7 @@ export default function Results() {
         })();
 
         return () => ab.abort();
-    }, [urlParam, reportData]);
+    }, [urlParam, reportData, reportId]);
 
     const colorFor = (rating: string) => {
         switch (rating) {
@@ -243,7 +269,9 @@ export default function Results() {
                         alignSelf: "flex-start",
                     }}
                 >
-                    <Text style={{ color: "#60a5fa", fontSize: 14 }}>← Back</Text>
+                    <Text style={{ color: "#60a5fa", fontSize: 14 }}>
+                        ← {fromSaved === 'true' ? 'Back to Saved Reports' : 'Back'}
+                    </Text>
                 </TouchableOpacity>
 
                 {/* Title + channel */}

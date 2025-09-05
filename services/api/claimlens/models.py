@@ -1,5 +1,6 @@
 from pydantic import BaseModel, HttpUrl, Field
 from typing import List, Optional, Literal
+from datetime import datetime
 
 Rating = Literal["unverified", "doubtful", "mixed", "reliable", "solid"]
 
@@ -30,3 +31,18 @@ class AnalyzeResponse(BaseModel):
     reportId: str | None = None  # Will be populated by the backend after saving
     meta: dict
     videoSummary: str
+
+class SavedReportSummary(BaseModel):
+    id: str
+    video: Video
+    consensus: Consensus
+    created_at: datetime
+    
+class SavedReportsRequest(BaseModel):
+    limit: int = Field(default=5, ge=1, le=50)
+    offset: int = Field(default=0, ge=0)
+
+class SavedReportsResponse(BaseModel):
+    reports: List[SavedReportSummary]
+    total: int
+    has_more: bool

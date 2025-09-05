@@ -1,51 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+
+// Keep messages stable across renders
+const MESSAGES = [
+    "Curiosity is the first step toward truth.",
+    "Every claim deserves a question mark.",
+    "Asking questions is how discoveries begin.",
+    "Fact-checking isn't about doubt… it's about clarity.",
+    "The right question is often more powerful than the right answer.",
+    "Curiosity turns confusion into discovery.",
+    "Checking claims keeps knowledge honest.",
+    "Skepticism sharpens understanding.",
+    "Curiosity is your superpower in the age of information.",
+    "Asking why is how progress begins.",
+    "Truth is the foundation of trust in a world of claims.",
+    "A fact-checked mind is a shield against deception.",
+    "Verification is the bridge between information and knowledge.",
+    "In a world of noise, critical thinking is your compass.",
+    "The pursuit of truth begins with questioning everything.",
+    "Doubt is the birthplace of deeper understanding.",
+    "Every fact verified is a step toward a clearer reality.",
+    "Wisdom starts with the courage to question.",
+    "In the marketplace of ideas, verification is the currency.",
+    "The truth may be complex, but it's always worth pursuing."
+];
 
 // This makes the screen visible in the navigation
 export default function AnalyzingScreen() {
     console.log('🔥 AnalyzingScreen component loaded/rendered');
     const [message, setMessage] = useState('Analyzing...');
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    const MESSAGES = [
-        "Curiosity is the first step toward truth.",
-        "Every claim deserves a question mark.",
-        "Asking questions is how discoveries begin.",
-        "Fact-checking isn't about doubt… it's about clarity.",
-        "The right question is often more powerful than the right answer.",
-        "Curiosity turns confusion into discovery.",
-        "Checking claims keeps knowledge honest.",
-        "Skepticism sharpens understanding.",
-        "Curiosity is your superpower in the age of information.",
-        "Asking why is how progress begins.",
-        "Truth is the foundation of trust in a world of claims.",
-        "A fact-checked mind is a shield against deception.",
-        "Verification is the bridge between information and knowledge.",
-        "In a world of noise, critical thinking is your compass.",
-        "The pursuit of truth begins with questioning everything.",
-        "Doubt is the birthplace of deeper understanding.",
-        "Every fact verified is a step toward a clearer reality.",
-        "Wisdom starts with the courage to question.",
-        "In the marketplace of ideas, verification is the currency.",
-        "The truth may be complex, but it's always worth pursuing."
-    ];
+    useFocusEffect(
+        React.useCallback(() => {
+            console.log('🔍 AnalyzingScreen focused');
 
-    useEffect(() => {
+            // Initial message
+            const randomIndex = Math.floor(Math.random() * MESSAGES.length);
+            setMessage(MESSAGES[randomIndex]);
 
-        // Initial message
-        const randomIndex = Math.floor(Math.random() * MESSAGES.length);
-        setMessage(MESSAGES[randomIndex]);
+            // Set up interval to change message every 3 seconds
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+            intervalRef.current = setInterval(() => {
+                const newRandomIndex = Math.floor(Math.random() * MESSAGES.length);
+                setMessage(MESSAGES[newRandomIndex]);
+            }, 2500);
 
-        // Set up interval to change message every 3 seconds
-        const interval = setInterval(() => {
-            const newRandomIndex = Math.floor(Math.random() * MESSAGES.length);
-            setMessage(MESSAGES[newRandomIndex]);
-        }, 2500);
-
-        return () => {
-            console.log('💀 AnalyzingScreen unmounting');
-            clearInterval(interval);
-        };
-    }, []);
+            return () => {
+                console.log('💀 AnalyzingScreen unfocused/unmounting');
+                if (intervalRef.current) {
+                    clearInterval(intervalRef.current);
+                    intervalRef.current = null;
+                }
+            };
+        }, [])
+    );
 
     console.log('🎯 AnalyzingScreen render - current message state:', message);
 
